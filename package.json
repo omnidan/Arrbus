@@ -1,0 +1,25 @@
+{
+  "name": "Arrbus",
+  "version": "0.1.0",
+  "main": "main.js",
+  "author": "Daniel Bugl <daniel.bugl@touchlay.com>",
+  "description": "Communication with the BusPirate v3",
+  "contributors": [
+    {
+      "name": "Daniel Bugl",
+      "email": "daniel.bugl@touchlay.com"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://git@github.com:omnidan/Arrbus.git"
+  },
+  "dependencies": {
+    "serialport": "^1.4.0"
+  },
+  "license": "BSD",
+  "engines": {
+    "node": ">=0.10"
+  },
+  "devDependencies": {}
+}
