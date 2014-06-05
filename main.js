@@ -1,5 +1,7 @@
+// main.js
 var serialPort = require('serialport');
 
+// scan for buspirates in all serial ports
 function scanPirates(callback) {
   serialPort.list(function (err, ports) {
     var pirates = [];
@@ -11,35 +13,49 @@ function scanPirates(callback) {
         pirates.push(port);
       }
     });
+    // return list of buspirates found
     callback(pirates);
   });
 }
 
+// connect to a buspirate and return the serial connection
 function connectPirate(pirate, callback) {
   var SerialPort_Obj = serialPort.SerialPort; // localize object constructor
 
+  // initialize connection, buspirates need baudrate 115200
+  // parser raw needed for command line input
   var connection = new SerialPort_Obj(pirate.comName, {
     parser: serialPort.parsers.raw,
     baudrate: 115200
   });
 
+  // connect to the buspirate and return the result
   connection.open(function (err) {
     if (err) callback(err, null);
     else callback(null, connection);
   });
 }
 
+// parse output of the buspirate
+// right now, this only outputs to the terminal
+// TODO: later, we want to send this data to the GUI via IPC
 function parsePirate(data) {
   process.stdout.write(data.toString('utf-8'));
 }
 
+// parse the 'i' command output from the buspirate to gather information
 function queryPirate(connection, callback) {
+  // send the 'i' command
   connection.write('i\n');
 
+  // now parse the output
   var full_data = '';
   connection.on('data', function (data) {
+    // add data to full_data (with utf-8 formatting)...
     var encoded_data = data.toString('utf-8');
     full_data += encoded_data;
+
+    // ...until we hit 'HiZ>', which means it's the end of the output
     if (encoded_data.substr(encoded_data.length - 4) == 'HiZ>') { // FIXME: this might not always work, e.g. when the data is sent too slow and a new buffer is opened
       // sanitize data
       var split_data = full_data.split('\n');
@@ -64,6 +80,7 @@ function queryPirate(connection, callback) {
   });
 }
 
+// main functionality below
 scanPirates(function (pirates) {
   console.log('Found BusPirates:', pirates);
 
@@ -79,13 +96,18 @@ scanPirates(function (pirates) {
         }
         console.log('Hydrated BusPirate object:', pirates[0]);
 
+        // now set the parsePirate listener (we don't want it to display the
+        // output we get while gathering data from the buspirate)
+        // TODO: later, we might want a solution that locks this listener while querying
         connection.on('data', parsePirate);
       });
 
+      // parse input from command line...
       process.stdin.resume();
       process.stdin.setEncoding('utf8');
 
       process.stdin.on('data', function (chunk) {
+        // ...and send it to the buspirate
         connection.write(chunk);
       });
     });
