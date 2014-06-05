@@ -50,7 +50,7 @@ function queryPirate(connection, callback) {
 
   // now parse the output
   var full_data = '';
-  connection.on('data', function (data) {
+  var query_function = function (data) {
     // add data to full_data (with utf-8 formatting)...
     var encoded_data = data.toString('utf-8');
     full_data += encoded_data;
@@ -74,15 +74,21 @@ function queryPirate(connection, callback) {
         idstring: hydration_data[2].substring(0, hydration_data[2].length - 1)
       };
 
+      // clean up
+      connection.removeListener('data', query_function);
+
       // return data
       callback(result);
     }
-  });
+  };
+  connection.on('data', query_function);
 }
 
 // main functionality below
+console.log('Scanning...');
 scanPirates(function (pirates) {
-  console.log('Found BusPirates:', pirates);
+  console.log('Found', pirates.length, 'BusPirate(s).');
+  // TODO: when there's more than one buspirate, show the user an interface to pick from
 
   if (pirates.length == 1) {
     console.log('Only one BusPirate was found, connecting to it...');
@@ -100,15 +106,18 @@ scanPirates(function (pirates) {
         // output we get while gathering data from the buspirate)
         // TODO: later, we might want a solution that locks this listener while querying
         connection.on('data', parsePirate);
-      });
 
-      // parse input from command line...
-      process.stdin.resume();
-      process.stdin.setEncoding('utf8');
+        // parse input from command line...
+        process.stdin.resume();
+        process.stdin.setEncoding('utf8');
 
-      process.stdin.on('data', function (chunk) {
-        // ...and send it to the buspirate
-        connection.write(chunk);
+        process.stdin.on('data', function (chunk) {
+          // ...and send it to the buspirate
+          connection.write(chunk);
+        });
+
+        // tell the user we're ready
+        console.log('Ready for input...');
       });
     });
   }
